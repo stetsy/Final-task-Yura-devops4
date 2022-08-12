@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops4-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: devops4-app
+  template:
+    metadata:
+      labels:
+        app: devops4-app
+    spec:
+      containers:
+      - name: echoheaders
+        image: public.ecr.aws/n3q6n4k8/yura/devops4
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080

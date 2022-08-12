@@ -1,0 +1,77 @@
+name: Deploy to AWS EKS
+on: 
+  workflow_dispatch
+defaults:
+  run:
+    working-directory: application
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+     
+     - name: Checkout
+       uses: actions/checkout@v2
+       
+       
+     - name: Configure AWS credentials
+       uses: aws-actions/configure-aws-credentials@v1
+       with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION_ID }}
+    
+     - name: deploy to cluster
+       run: |
+             aws eks --region $AWS_REGION update-kubeconfig --name FT-cluster-devops4
+             kubectl apply -f ./deployment.yml && kubectl apply -f ./service.yml
+             
+          
+#      - name: deploy to cluster
+#        uses: kodermax/kubectl-aws-eks@master
+#        env:
+#          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+#          ECR_REGISTRY: public.ecr.aws/n3q6n4k8/yura/devops4
+#          ECR_REPOSITORY: yura/devops4
+         
+#        with:
+#          args: apply -f https://github.com/stetsy/final-task/blob/dev/application/deployment.yml
+     
+
+     - name: Login to AWS ECR
+       id: loginECR
+       uses: aws-actions/amazon-ecr-login@v1
+
+     - name: Build, tag, and push image to Amazon ECR
+       id: build-image
+       env:
+          #ECR_REGISTRY: public.ecr.aws/n3q6n4k8/yura/devops4
+          #ECR_REPOSITORY: yura/devops4
+          AWS_REGION: ${{ secrets.AWS_REGION_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          
+
+       run: |
+          # Build a docker container and
+          # push it to ECR so that it can
+          # be deployed to ECS.
+          #docker build -f application/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY . 
+          #docker push $ECR_REGISTRY/$ECR_REPOSITORY
+          #echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY"
+          ls -la
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/n3q6n4k8
+          docker build -t yura/devops4 .
+          docker tag yura/devops4:latest public.ecr.aws/n3q6n4k8/yura/devops4:latest
+          docker push public.ecr.aws/n3q6n4k8/yura/devops4:latest
+          
+     - name: update image to cluster
+       uses: kodermax/kubectl-aws-eks@master
+       env:
+         KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+         ECR_REGISTRY: public.ecr.aws/n3q6n4k8
+         ECR_REPOSITORY: yura/devops4
+         
+       with:
+         args: set image deployment devops4-app echoheaders=public.ecr.aws/n3q6n4k8/yura/devops4:latest
