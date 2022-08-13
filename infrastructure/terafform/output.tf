@@ -26,12 +26,3 @@ output "private_subnets" {
 output "aws_kms_key" {
   value = aws_kms_key.this.arn
 }
-
-
-
-
-
-//output "s3_bucket_id" {
-  //description = "The name of the bucket."
-  //value       = try(aws_s3_bucket_policy.this[0].id, aws_s3_bucket.this[0].id, "")
-//}
